@@ -41,7 +41,9 @@ class KeshroClient:
             except Exception:
                 detail = response.text.strip() or None
             message = detail or response.reason_phrase
-            raise KeshroApiError(f"Keshro API error ({response.status_code}): {message}")
+            raise KeshroApiError(
+                f"Keshro API error ({response.status_code}): {message}"
+            )
         if response.status_code == 204 or not response.content:
             return None
         return response.json()
@@ -73,7 +75,9 @@ class KeshroClient:
             "analysis_run_feedback": run_outcome,
         }
 
-    def get_plan(self, *, plan_id: str | None = None, migration_id: str | None = None) -> dict[str, Any]:
+    def get_plan(
+        self, *, plan_id: str | None = None, migration_id: str | None = None
+    ) -> dict[str, Any]:
         if plan_id:
             plan = self._request("GET", f"/plans/{plan_id}")
         elif migration_id:
@@ -97,7 +101,10 @@ class KeshroClient:
         claude_text: str | None = None,
     ) -> dict[str, Any]:
         if template_key:
-            payload: dict[str, Any] = {"migration_id": migration_id, "template_key": template_key}
+            payload: dict[str, Any] = {
+                "migration_id": migration_id,
+                "template_key": template_key,
+            }
             if title:
                 payload["title"] = title
             if summary:
@@ -122,7 +129,9 @@ class KeshroClient:
 
     def edit_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
         payload = {key: value for key, value in fields.items() if value is not None}
-        return self._request("PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload)
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
 
     def save_outcome(self, plan_id: str, **fields: Any) -> dict[str, Any]:
         payload = {key: value for key, value in fields.items() if value is not None}
@@ -135,11 +144,19 @@ class KeshroClient:
         plan_outcome = data.get("execution_outcome") or {}
         run_feedback = data.get("analysis_run_feedback") or {}
         lines: list[str] = []
-        lines.append(f"# Migration Project: {project.get('source_type', 'Unknown')} -> {project.get('target_type', 'Unknown')}")
+        lines.append(
+            f"# Migration Project: {project.get('source_type', 'Unknown')} -> {project.get('target_type', 'Unknown')}"
+        )
         lines.append("")
         lines.append("## Analysis")
         lines.append("")
-        for key in ("status", "created_at", "confidence_score", "analysis_revision", "outcome_status"):
+        for key in (
+            "status",
+            "created_at",
+            "confidence_score",
+            "analysis_revision",
+            "outcome_status",
+        ):
             value = project.get(key)
             if value is not None:
                 lines.append(f"- {key.replace('_', ' ').title()}: {value}")
@@ -150,12 +167,16 @@ class KeshroClient:
             lines.append("")
             lines.append("### Risks")
             for risk in project["risks"]:
-                lines.append(f"- {risk.get('title', 'Untitled risk')} [{risk.get('severity', 'unknown')}]")
+                lines.append(
+                    f"- {risk.get('title', 'Untitled risk')} [{risk.get('severity', 'unknown')}]"
+                )
         if project.get("unknowns"):
             lines.append("")
             lines.append("### Unknowns")
             for unknown in project["unknowns"]:
-                lines.append(f"- {unknown.get('question', 'Unknown question')} ({unknown.get('priority', 'unknown')})")
+                lines.append(
+                    f"- {unknown.get('question', 'Unknown question')} ({unknown.get('priority', 'unknown')})"
+                )
                 if unknown.get("answer"):
                     lines.append(f"  - Answer: {unknown['answer']}")
         if project.get("context"):
@@ -176,7 +197,9 @@ class KeshroClient:
                 lines.append(f"- Summary: {plan['summary']}")
             lines.append("")
             for step in plan.get("plan_steps", []):
-                lines.append(f"- {step.get('order', '?')}. {step.get('title', 'Untitled')} [{step.get('status', 'todo')}]")
+                lines.append(
+                    f"- {step.get('order', '?')}. {step.get('title', 'Untitled')} [{step.get('status', 'todo')}]"
+                )
                 if step.get("owner"):
                     lines.append(f"  - Owner: {step['owner']}")
                 if step.get("blocked_reason"):
@@ -197,7 +220,13 @@ class KeshroClient:
             lines.append("")
             lines.append("## Analysis Run Feedback")
             lines.append("")
-            for key in ("outcome_status", "actual_hours", "actual_cost", "downtime_minutes", "notes"):
+            for key in (
+                "outcome_status",
+                "actual_hours",
+                "actual_cost",
+                "downtime_minutes",
+                "notes",
+            ):
                 value = run_feedback.get(key)
                 if value is not None:
                     lines.append(f"- {key.replace('_', ' ').title()}: {value}")
@@ -225,4 +254,6 @@ def load_steps_from_json_file(path: str) -> list[dict[str, Any]]:
         return data
     if isinstance(data, dict) and isinstance(data.get("plan_steps"), list):
         return data["plan_steps"]
-    raise KeshroApiError("Plan file must be a JSON array of steps or an object with plan_steps")
+    raise KeshroApiError(
+        "Plan file must be a JSON array of steps or an object with plan_steps"
+    )
