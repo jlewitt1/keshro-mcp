@@ -51,6 +51,64 @@ class KeshroClient:
     def list_templates(self) -> list[dict[str, Any]]:
         return self._request("GET", "/plans/templates")
 
+    def list_projects(
+        self,
+        *,
+        limit: int = 20,
+        org_id: str | None = None,
+        status: str | None = None,
+        search: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: list[str] = [f"limit={limit}"]
+        if org_id:
+            params.append(f"org_id={org_id}")
+        if status:
+            params.append(f"status={status}")
+        path = "/migrations"
+        if params:
+            path += "?" + "&".join(params)
+        items = self._request("GET", path)
+        if not search:
+            return items
+        query = search.strip().lower()
+        return [
+            item
+            for item in items
+            if query in (item.get("id") or "").lower()
+            or query in (item.get("source_type") or "").lower()
+            or query in (item.get("target_type") or "").lower()
+            or query in (item.get("status") or "").lower()
+        ]
+
+    def list_plans(
+        self,
+        *,
+        limit: int = 100,
+        org_id: str | None = None,
+        search: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: list[str] = [f"limit={limit}"]
+        if org_id:
+            params.append(f"org_id={org_id}")
+        path = "/plans"
+        if params:
+            path += "?" + "&".join(params)
+        items = self._request("GET", path)
+        if not search:
+            return items
+        query = search.strip().lower()
+        return [
+            item
+            for item in items
+            if query in (item.get("id") or "").lower()
+            or query in (item.get("migration_id") or "").lower()
+            or query in (item.get("title") or "").lower()
+            or query in (item.get("source_type") or "").lower()
+            or query in (item.get("target_type") or "").lower()
+            or query in (item.get("template_key") or "").lower()
+            or query in (item.get("summary") or "").lower()
+        ]
+
     def get_project(self, migration_id: str) -> dict[str, Any]:
         project = self._request("GET", f"/migrations/{migration_id}")
         try:

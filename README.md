@@ -93,6 +93,8 @@ Replace:
 - `KESHRO_API_URL` with your Keshro instance URL
 - `KESHRO_API_TOKEN` with your token from step 2
 
+*Note: For local development use `http://localhost:8000/api"`*
+
 ### 4. Restart Claude Code and verify
 
 ```

@@ -38,6 +38,34 @@ def list_templates(
 
 
 @mcp.tool()
+def list_projects(
+    search: str | None = None,
+    limit: int = 20,
+    org_id: str | None = None,
+    status: str | None = None,
+) -> list[dict[str, Any]]:
+    return _run_with_client(
+        lambda client: client.list_projects(
+            search=search,
+            limit=limit,
+            org_id=org_id,
+            status=status,
+        )
+    )
+
+
+@mcp.tool()
+def list_plans(
+    search: str | None = None,
+    limit: int = 100,
+    org_id: str | None = None,
+) -> list[dict[str, Any]]:
+    return _run_with_client(
+        lambda client: client.list_plans(search=search, limit=limit, org_id=org_id)
+    )
+
+
+@mcp.tool()
 def get_project(migration_id: str) -> dict[str, Any]:
     return _run_with_client(lambda client: client.get_project(migration_id))
 
