@@ -13,6 +13,10 @@ class KeshroApiError(RuntimeError):
     pass
 
 
+EXPORT_FORMAT = "keshro-plan-json"
+EXPORT_SCHEMA_VERSION = "1"
+
+
 class KeshroClient:
     def __init__(self, settings: Settings):
         self._settings = settings
@@ -22,6 +26,7 @@ class KeshroClient:
             headers={
                 "Authorization": f"Bearer {settings.api_token}",
                 "Content-Type": "application/json",
+                "X-Keshro-Client": "mcp",
             },
         )
 
@@ -195,100 +200,60 @@ class KeshroClient:
         payload = {key: value for key, value in fields.items() if value is not None}
         return self._request("POST", f"/plans/{plan_id}/outcome", json_body=payload)
 
-    def export_project(self, migration_id: str) -> str:
+    def export_project(self, migration_id: str) -> dict[str, Any]:
         data = self.get_project(migration_id)
         project = data.get("project") or {}
         plan = data.get("execution_plan") or {}
         plan_outcome = data.get("execution_outcome") or {}
         run_feedback = data.get("analysis_run_feedback") or {}
-        lines: list[str] = []
-        lines.append(
-            f"# Migration Project: {project.get('source_type', 'Unknown')} -> {project.get('target_type', 'Unknown')}"
-        )
-        lines.append("")
-        lines.append("## Analysis")
-        lines.append("")
-        for key in (
-            "status",
-            "created_at",
-            "confidence_score",
-            "analysis_revision",
-            "outcome_status",
-        ):
-            value = project.get(key)
-            if value is not None:
-                lines.append(f"- {key.replace('_', ' ').title()}: {value}")
-        if project.get("notes"):
-            lines.append("")
-            lines.append(project["notes"].strip())
-        if project.get("risks"):
-            lines.append("")
-            lines.append("### Risks")
-            for risk in project["risks"]:
-                lines.append(
-                    f"- {risk.get('title', 'Untitled risk')} [{risk.get('severity', 'unknown')}]"
-                )
-        if project.get("unknowns"):
-            lines.append("")
-            lines.append("### Unknowns")
-            for unknown in project["unknowns"]:
-                lines.append(
-                    f"- {unknown.get('question', 'Unknown question')} ({unknown.get('priority', 'unknown')})"
-                )
-                if unknown.get("answer"):
-                    lines.append(f"  - Answer: {unknown['answer']}")
-        if project.get("context"):
-            lines.append("")
-            lines.append("## Context")
-            lines.append("")
-            lines.append(project["context"].strip())
-        lines.append("")
-        lines.append("## Execution Plan")
-        lines.append("")
-        if not plan:
-            lines.append("No execution plan created.")
-        else:
-            lines.append(f"- Status: {plan.get('status', 'unknown')}")
-            if plan.get("template_key"):
-                lines.append(f"- Template: {plan['template_key']}")
-            if plan.get("summary"):
-                lines.append(f"- Summary: {plan['summary']}")
-            lines.append("")
-            for step in plan.get("plan_steps", []):
-                lines.append(
-                    f"- {step.get('order', '?')}. {step.get('title', 'Untitled')} [{step.get('status', 'todo')}]"
-                )
-                if step.get("owner"):
-                    lines.append(f"  - Owner: {step['owner']}")
-                if step.get("blocked_reason"):
-                    lines.append(f"  - Blocked: {step['blocked_reason']}")
-                if step.get("description"):
-                    lines.append(f"  - {step['description']}")
-        lines.append("")
-        lines.append("## Execution Outcomes")
-        lines.append("")
-        if plan_outcome:
-            for key in ("status", "summary", "actual_hours", "actual_cost", "notes"):
-                value = plan_outcome.get(key)
-                if value is not None:
-                    lines.append(f"- {key.replace('_', ' ').title()}: {value}")
-        else:
-            lines.append("No execution outcome recorded.")
-        if run_feedback:
-            lines.append("")
-            lines.append("## Analysis Run Feedback")
-            lines.append("")
-            for key in (
-                "outcome_status",
-                "actual_hours",
-                "actual_cost",
-                "downtime_minutes",
-                "notes",
-            ):
-                value = run_feedback.get(key)
-                if value is not None:
-                    lines.append(f"- {key.replace('_', ' ').title()}: {value}")
-        return "\n".join(lines).strip() + "\n"
+        return {
+            "kind": "keshro.project.export",
+            "format": EXPORT_FORMAT,
+            "schema_version": EXPORT_SCHEMA_VERSION,
+            "exported_at": _utc_now(),
+            "project": {
+                "migration_id": project.get("id"),
+                "source_type": project.get("source_type"),
+                "target_type": project.get("target_type"),
+                "status": project.get("status"),
+                "migration_mode": project.get("migration_mode"),
+                "input_method": project.get("input_method"),
+                "org_id": project.get("org_id"),
+                "created_at": project.get("created_at"),
+                "github_url": project.get("github_url"),
+                "resource_url": project.get("resource_url"),
+            },
+            "analysis": {
+                "confidence_score": project.get("confidence_score"),
+                "confidence_explanation": project.get("confidence_explanation"),
+                "analysis_revision": project.get("analysis_revision"),
+                "similar_migrations_used": project.get("similar_migrations_used"),
+                "notes": project.get("notes"),
+                "risks": project.get("risks") or [],
+                "unknowns": project.get("unknowns") or [],
+                "migration_steps": project.get("migration_steps") or [],
+                "migration_script": project.get("migration_script"),
+                "assessment_quality": project.get("assessment_quality"),
+                "context": project.get("context"),
+                "custom_fields": project.get("custom_fields") or {},
+            },
+            "execution_plan": plan or None,
+            "execution_outcome": plan_outcome or None,
+            "analysis_run_feedback": run_feedback or None,
+            "adapter_hints": {
+                "canonical_task_id_field": "id",
+                "canonical_task_status_field": "status",
+                "owner_fields": ["owner_user_id", "owner"],
+                "external_issue_fields": ["linear_issue_id", "artifact_links"],
+                "supported_targets": ["linear", "jira"],
+            },
+        }
+
+
+def _utc_now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _steps_from_claude_text(text: str | None) -> list[dict[str, Any]]:
