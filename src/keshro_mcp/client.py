@@ -124,17 +124,9 @@ class KeshroClient:
             run_outcome = self._request("GET", f"/migrations/{migration_id}/outcomes")
         except KeshroApiError:
             run_outcome = None
-        if plan:
-            try:
-                plan_outcome = self._request("GET", f"/plans/{plan['id']}/outcome")
-            except KeshroApiError:
-                plan_outcome = None
-        else:
-            plan_outcome = None
         return {
             "project": project,
             "execution_plan": plan,
-            "execution_outcome": plan_outcome,
             "analysis_run_feedback": run_outcome,
         }
 
@@ -147,11 +139,45 @@ class KeshroClient:
             plan = self._request("GET", f"/migrations/{migration_id}/plan")
         else:
             raise KeshroApiError("Either plan_id or migration_id is required")
-        try:
-            outcome = self._request("GET", f"/plans/{plan['id']}/outcome")
-        except KeshroApiError:
-            outcome = None
-        return {"plan": plan, "outcome": outcome}
+        return {"plan": plan}
+
+    def next_task(self, plan_id: str) -> dict[str, Any]:
+        plan_bundle = self.get_plan(plan_id=plan_id)
+        plan = plan_bundle.get("plan") or {}
+        steps = plan.get("plan_steps") or []
+        task = next(
+            (
+                step
+                for step in steps
+                if (step.get("status") or "todo") not in {"completed", "done", "cancelled"}
+            ),
+            None,
+        )
+        return {
+            "plan_id": plan_id,
+            "task": task,
+        }
+
+    def get_history(
+        self, *, migration_id: str | None = None, plan_id: str | None = None
+    ) -> dict[str, Any]:
+        if plan_id:
+            plan_bundle = self.get_plan(plan_id=plan_id)
+            plan = plan_bundle.get("plan") or {}
+            return {
+                "migration_id": plan.get("migration_id"),
+                "plan_id": plan.get("id"),
+                "task_feedback_events": plan.get("task_feedback_events") or [],
+            }
+        if migration_id:
+            project = self.get_project(migration_id)
+            plan = project.get("execution_plan") or {}
+            return {
+                "migration_id": migration_id,
+                "plan_id": plan.get("id"),
+                "task_feedback_events": plan.get("task_feedback_events") or [],
+            }
+        raise KeshroApiError("Either migration_id or plan_id is required")
 
     def create_plan(
         self,
@@ -196,15 +222,108 @@ class KeshroClient:
             "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
         )
 
-    def save_outcome(self, plan_id: str, **fields: Any) -> dict[str, Any]:
-        payload = {key: value for key, value in fields.items() if value is not None}
-        return self._request("POST", f"/plans/{plan_id}/outcome", json_body=payload)
+    def start_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
+        payload = {
+            "status": "in_progress",
+            **{key: value for key, value in fields.items() if value is not None},
+        }
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
+
+    def complete_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
+        payload = {
+            "status": "completed",
+            "blocked_reason": "",
+            **{key: value for key, value in fields.items() if value is not None},
+        }
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
+
+    def append_replan_note(self, plan_id: str, note: str) -> dict[str, Any]:
+        plan_bundle = self.get_plan(plan_id=plan_id)
+        plan = plan_bundle.get("plan") or {}
+        existing_summary = (plan.get("summary") or "").strip()
+        note_line = f"[replan] {note.strip()}"
+        summary = f"{existing_summary}\n\n{note_line}".strip() if existing_summary else note_line
+        return self._request("PATCH", f"/plans/{plan_id}", json_body={"summary": summary})
+
+    def block_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
+        payload = {
+            "status": "blocked",
+            **{key: value for key, value in fields.items() if value is not None},
+        }
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
+
+    def unblock_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
+        payload = {
+            "status": fields.pop("status", "in_progress"),
+            "blocked_reason": "",
+            **{key: value for key, value in fields.items() if value is not None},
+        }
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
+
+    def append_task_note(
+        self, plan_id: str, task_id: str, note: str, feedback_reason: str | None = None
+    ) -> dict[str, Any]:
+        plan_bundle = self.get_plan(plan_id=plan_id)
+        plan = plan_bundle.get("plan") or {}
+        task = next(
+            (step for step in (plan.get("plan_steps") or []) if step.get("id") == task_id),
+            None,
+        )
+        if not task:
+            raise KeshroApiError(f"Task not found: {task_id}")
+        existing_notes = str(task.get("notes") or "").strip()
+        from datetime import datetime, timezone
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        next_notes = (
+            f"{existing_notes}\n\n[{timestamp}] {note.strip()}".strip()
+            if existing_notes
+            else f"[{timestamp}] {note.strip()}"
+        )
+        payload: dict[str, Any] = {"notes": next_notes}
+        if feedback_reason:
+            payload["feedback_reason"] = feedback_reason
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
+
+    def add_task_artifact(
+        self, plan_id: str, task_id: str, artifact_link: str, feedback_reason: str | None = None
+    ) -> dict[str, Any]:
+        plan_bundle = self.get_plan(plan_id=plan_id)
+        plan = plan_bundle.get("plan") or {}
+        task = next(
+            (step for step in (plan.get("plan_steps") or []) if step.get("id") == task_id),
+            None,
+        )
+        if not task:
+            raise KeshroApiError(f"Task not found: {task_id}")
+        existing_links = [
+            str(link).strip()
+            for link in (task.get("artifact_links") or [])
+            if str(link).strip()
+        ]
+        next_link = artifact_link.strip()
+        next_links = existing_links if next_link in existing_links else [*existing_links, next_link]
+        payload: dict[str, Any] = {"artifact_links": next_links}
+        if feedback_reason:
+            payload["feedback_reason"] = feedback_reason
+        return self._request(
+            "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
+        )
 
     def export_project(self, migration_id: str) -> dict[str, Any]:
         data = self.get_project(migration_id)
         project = data.get("project") or {}
         plan = data.get("execution_plan") or {}
-        plan_outcome = data.get("execution_outcome") or {}
         run_feedback = data.get("analysis_run_feedback") or {}
         return {
             "kind": "keshro.project.export",
@@ -238,7 +357,6 @@ class KeshroClient:
                 "custom_fields": project.get("custom_fields") or {},
             },
             "execution_plan": plan or None,
-            "execution_outcome": plan_outcome or None,
             "analysis_run_feedback": run_feedback or None,
             "adapter_hints": {
                 "canonical_task_id_field": "id",

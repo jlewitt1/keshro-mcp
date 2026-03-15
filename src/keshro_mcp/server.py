@@ -80,6 +80,20 @@ def get_plan(
 
 
 @mcp.tool()
+def next_task(plan_id: str) -> dict[str, Any]:
+    return _run_with_client(lambda client: client.next_task(plan_id))
+
+
+@mcp.tool()
+def get_history(
+    migration_id: str | None = None, plan_id: str | None = None
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.get_history(migration_id=migration_id, plan_id=plan_id)
+    )
+
+
+@mcp.tool()
 def create_plan(
     migration_id: str,
     template_key: str | None = None,
@@ -179,24 +193,120 @@ def edit_task(
 
 
 @mcp.tool()
-def save_outcome(
+def start_task(
     plan_id: str,
-    status: str,
-    summary: str,
-    actual_hours: int | None = None,
-    actual_cost: int | None = None,
+    task_id: str,
+    owner: str | None = None,
+    owner_user_id: str | None = None,
     notes: str | None = None,
+    feedback_reason: str | None = None,
+    artifact_links: list[str] | None = None,
 ) -> dict[str, Any]:
     return _run_with_client(
-        lambda client: client.save_outcome(
+        lambda client: client.start_task(
             plan_id,
-            status=status,
-            summary=summary,
-            actual_hours=actual_hours,
-            actual_cost=actual_cost,
+            task_id,
+            owner=owner,
+            owner_user_id=owner_user_id,
             notes=notes,
+            feedback_reason=feedback_reason,
+            artifact_links=artifact_links,
         )
     )
+
+
+@mcp.tool()
+def complete_task(
+    plan_id: str,
+    task_id: str,
+    notes: str | None = None,
+    feedback_reason: str | None = None,
+    artifact_links: list[str] | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.complete_task(
+            plan_id,
+            task_id,
+            notes=notes,
+            feedback_reason=feedback_reason,
+            artifact_links=artifact_links,
+        )
+    )
+
+
+@mcp.tool()
+def block_task(
+    plan_id: str,
+    task_id: str,
+    blocked_reason: str,
+    feedback_reason: str | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.block_task(
+            plan_id,
+            task_id,
+            blocked_reason=blocked_reason,
+            feedback_reason=feedback_reason,
+        )
+    )
+
+
+@mcp.tool()
+def unblock_task(
+    plan_id: str,
+    task_id: str,
+    notes: str | None = None,
+    feedback_reason: str | None = None,
+    status: str = "in_progress",
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.unblock_task(
+            plan_id,
+            task_id,
+            notes=notes,
+            feedback_reason=feedback_reason,
+            status=status,
+        )
+    )
+
+
+@mcp.tool()
+def append_task_note(
+    plan_id: str,
+    task_id: str,
+    note: str,
+    feedback_reason: str | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.append_task_note(
+            plan_id,
+            task_id,
+            note=note,
+            feedback_reason=feedback_reason,
+        )
+    )
+
+
+@mcp.tool()
+def add_task_artifact(
+    plan_id: str,
+    task_id: str,
+    artifact_link: str,
+    feedback_reason: str | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.add_task_artifact(
+            plan_id,
+            task_id,
+            artifact_link=artifact_link,
+            feedback_reason=feedback_reason,
+        )
+    )
+
+
+@mcp.tool()
+def append_replan_note(plan_id: str, note: str) -> dict[str, Any]:
+    return _run_with_client(lambda client: client.append_replan_note(plan_id, note))
 
 
 @mcp.tool()
