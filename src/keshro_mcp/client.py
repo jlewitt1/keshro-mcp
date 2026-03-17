@@ -144,15 +144,19 @@ class KeshroClient:
     def next_task(self, plan_id: str) -> dict[str, Any]:
         plan_bundle = self.get_plan(plan_id=plan_id)
         plan = plan_bundle.get("plan") or {}
-        steps = plan.get("plan_steps") or []
-        task = next(
-            (
-                step
-                for step in steps
-                if (step.get("status") or "todo") not in {"completed", "done", "cancelled"}
-            ),
-            None,
-        )
+        steps = sorted(plan.get("plan_steps") or [], key=lambda step: step.get("order", 0))
+        task = None
+        for desired_status in ("in_progress", "todo"):
+            task = next(
+                (
+                    step
+                    for step in steps
+                    if (step.get("status") or "todo").strip().lower() == desired_status
+                ),
+                None,
+            )
+            if task:
+                break
         return {
             "plan_id": plan_id,
             "task": task,

@@ -114,7 +114,7 @@ claude
 /mcp
 ```
 
-You should see **Keshro MCP Server · ✔ connected** with 17 tools available.
+You should see **Keshro MCP Server · ✔ connected** with 19 tools available.
 
 ### First test
 
@@ -122,7 +122,7 @@ Ask Claude Code to `list all keshro templates` to confirm everything is working.
 
 ## Recommended execution loop
 
-Use the MCP tools the same way the CLI skill does:
+Use the MCP tools for the same execution loop that the CLI now drives with `keshro continue` or `keshro agent-prompt`:
 
 1. `get_project(migration_id=...)`
 2. `get_plan(plan_id=...)`
@@ -133,6 +133,8 @@ Use the MCP tools the same way the CLI skill does:
 7. `unblock_task(...)` when the blocker is cleared
 8. `append_replan_note(...)` if the migration shape changes
 9. `complete_task(...)` once the task is actually done
+
+MCP is best when you want Keshro available as tools inside the agent loop. For the normal Claude Code terminal workflow, prefer the CLI. Use MCP when you specifically want tool-based reads and writes inside the agent itself.
 
 ## Event behavior
 
@@ -150,6 +152,11 @@ Ask first:
 
 - `complete_task`
 - major replans that materially change scope or sequencing
+
+Important:
+
+- `next_task` returns the next actionable task, preferring `in_progress` tasks first and then `todo` tasks.
+- Do not automatically move past a blocked task unless the plan clearly supports parallel or out-of-order work.
 
 Concrete examples:
 
