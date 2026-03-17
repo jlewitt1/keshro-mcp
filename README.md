@@ -2,6 +2,8 @@
 
 `keshro-mcp` is a thin MCP server over the private Keshro API. It lets Claude or another MCP client read and update Keshro Migration Projects without moving business logic out of the hosted backend.
 
+> **For most users, the CLI is the recommended way to use Keshro with Claude Code.** Run `keshro continue -p <plan-id>` in your terminal — it handles auth, fetches the plan, and gives Claude the execution context automatically. Use MCP only if you specifically need tool-based integration inside an MCP-compatible agent environment.
+
 ## Status
 
 This package is intended to expose Keshro as a planning and sync surface, not as the migration executor.
@@ -62,10 +64,21 @@ keshro-mcp
 - Claude or another agent can pull project/plan state, refine it from repo context, and sync changes back.
 - Pre-analysis follow-up questions should stay product-owned as structured `AskUserQuestions` data rather than vendor-specific interactive prompts, so the same question set can be reused in the web app, CLI, or MCP workflows.
 
+## CLI vs MCP
+
+| | CLI (`keshro continue`) | MCP |
+|---|---|---|
+| **Setup** | `pip install keshro` + `keshro login` | Clone repo, configure `~/.claude.json`, restart Claude Code |
+| **How it works** | Prints execution prompt to stdout; Claude reads and follows | Claude calls MCP tools directly |
+| **Auth** | CLI handles it automatically | Requires `KESHRO_API_TOKEN` in env config |
+| **Best for** | Claude Code terminal workflow (recommended) | Non-CLI agent environments, or when you want Keshro as tools inside the agent loop |
+| **Task handoff** | Built into the prompt (asks user before continuing) | Agent must implement its own handoff logic |
 
 ## Claude Code MCP Setup
 
-Use Keshro directly from Claude Code via MCP.
+> **Prefer the CLI instead.** Install the `keshro` CLI, run `keshro login`, then `keshro continue -p <plan-id>` in your Claude Code terminal. No MCP config needed.
+
+If you still want MCP:
 
 ### 1. Clone and install
 
@@ -120,9 +133,9 @@ You should see **Keshro MCP Server · ✔ connected** with 19 tools available.
 
 Ask Claude Code to `list all keshro templates` to confirm everything is working.
 
-## Recommended execution loop
+## Execution loop (MCP)
 
-Use the MCP tools for the same execution loop that the CLI now drives with `keshro continue` or `keshro agent-prompt`:
+If you are using MCP instead of the CLI, follow this loop:
 
 1. `get_project(migration_id=...)`
 2. `get_plan(plan_id=...)`
@@ -132,13 +145,9 @@ Use the MCP tools for the same execution loop that the CLI now drives with `kesh
 6. `block_task(...)` when a real blocker appears
 7. `unblock_task(...)` when the blocker is cleared
 8. `append_replan_note(...)` if the migration shape changes
-9. `complete_task(...)` once the task is actually done
-
-MCP is best when you want Keshro available as tools inside the agent loop. For the normal Claude Code terminal workflow, prefer the CLI. Use MCP when you specifically want tool-based reads and writes inside the agent itself.
+9. `complete_task(...)` once the task is actually done — ask the user first
 
 ## Event behavior
-
-Use the MCP tools as the live execution-write path while Claude is working.
 
 Write immediately:
 
@@ -157,18 +166,4 @@ Important:
 
 - `next_task` returns the next actionable task, preferring `in_progress` tasks first and then `todo` tasks.
 - Do not automatically move past a blocked task unless the plan clearly supports parallel or out-of-order work.
-
-Concrete examples:
-
-- Claude starts on the next task:
-  - `start_task(plan_id=..., task_id=...)`
-- Claude discovers a meaningful execution detail:
-  - `append_task_note(plan_id=..., task_id=..., note="Airflow will orchestrate Batch during pilot")`
-- Claude opens a PR or issue:
-  - `add_task_artifact(plan_id=..., task_id=..., artifact_link="<url>")`
-- Claude hits a real blocker:
-  - `block_task(plan_id=..., task_id=..., blocked_reason="Waiting on Terraform IAM role changes")`
-- Claude resumes after the blocker is cleared:
-  - `unblock_task(plan_id=..., task_id=..., notes="IAM fix applied; resuming pilot")`
-- Claude believes the task is done:
-  - ask first, then `complete_task(plan_id=..., task_id=..., notes="<what landed>")`
+- After completing a task, summarize what was accomplished and ask the user before continuing to the next task.
