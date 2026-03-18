@@ -35,6 +35,27 @@ Or after install:
 keshro-mcp
 ```
 
+## Publishing a new MCP version
+
+### Via GitHub Actions (recommended)
+
+1. Update the version in `pyproject.toml` and push
+2. Go to Actions → "Publish MCP" → Run workflow
+3. Select production or staging and run
+
+Requires `DEPLOY_SECRET` in the repo's GitHub secrets (must match the `DEPLOY_SECRET` env var on the backend).
+
+### Manual
+
+1. Update the version in `pyproject.toml`
+2. Build: `python -m build --sdist`
+3. Upload:
+   ```bash
+   curl -X PUT -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+     -F "file=@dist/keshro_mcp-0.1.0.tar.gz" \
+     https://api.keshro.com/api/mcp/upload
+   ```
+
 ## Exposed tools
 
 - `list_templates`
