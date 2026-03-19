@@ -94,6 +94,10 @@ Requires `DEPLOY_SECRET` in the repo's GitHub secrets (must match the `DEPLOY_SE
 | **Auth** | CLI handles it automatically | Requires `KESHRO_API_TOKEN` in env config |
 | **Best for** | Claude Code terminal workflow (recommended) | Non-CLI agent environments, or when you want Keshro as tools inside the agent loop |
 | **Task handoff** | Built into the prompt (asks user before continuing) | Agent must implement its own handoff logic |
+| **Session history** | Includes prior task progress so Claude knows what was already done | Agent must track this itself |
+| **Git checkpoints** | Auto-creates checkpoint commits before each task | Agent must implement this itself |
+| **Validation** | Prompts Claude to verify changes before marking done | Agent must implement this itself |
+| **Multi-repo** | `--dir` flag to point Claude at a different codebase | N/A |
 
 ## Claude Code MCP Setup
 
