@@ -98,7 +98,7 @@ Requires `DEPLOY_SECRET` in the repo's GitHub secrets (must match the `DEPLOY_SE
 | **Git checkpoints** | Auto-creates checkpoint commits before each task | Agent must implement this itself |
 | **Validation** | Prompts Claude to verify changes before marking done | Agent must implement this itself |
 | **Multi-repo** | `--dir` flag to point agent at a different codebase | N/A |
-| **Parallel agents** | Auto-assign tasks respecting dependencies; parallelizable tasks auto-split into sub-tasks | Agent must coordinate externally |
+| **Parallel agents** | Parallel by default — launches concurrent agents in git worktrees, one per actionable task. `--concurrency N`, `--dry-run`, `--all` for wave execution | Agent must coordinate externally |
 | **Task handoff** | "Next task should know" notes flow automatically to the next task | Agent must implement |
 | **Draft gate** | Draft plans require `--confirm` before execution | N/A |
 
