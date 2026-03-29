@@ -144,7 +144,9 @@ class KeshroClient:
     def next_task(self, plan_id: str) -> dict[str, Any]:
         plan_bundle = self.get_plan(plan_id=plan_id)
         plan = plan_bundle.get("plan") or {}
-        steps = sorted(plan.get("plan_steps") or [], key=lambda step: step.get("order", 0))
+        steps = sorted(
+            plan.get("plan_steps") or [], key=lambda step: step.get("order", 0)
+        )
         task = None
         for desired_status in ("in_progress", "todo"):
             task = next(
@@ -235,7 +237,9 @@ class KeshroClient:
             "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
         )
 
-    def complete_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
+    def complete_task(
+        self, plan_id: str, task_id: str, **fields: Any
+    ) -> dict[str, Any]:
         payload = {
             "status": "completed",
             "blocked_reason": "",
@@ -250,8 +254,14 @@ class KeshroClient:
         plan = plan_bundle.get("plan") or {}
         existing_summary = (plan.get("summary") or "").strip()
         note_line = f"[replan] {note.strip()}"
-        summary = f"{existing_summary}\n\n{note_line}".strip() if existing_summary else note_line
-        return self._request("PATCH", f"/plans/{plan_id}", json_body={"summary": summary})
+        summary = (
+            f"{existing_summary}\n\n{note_line}".strip()
+            if existing_summary
+            else note_line
+        )
+        return self._request(
+            "PATCH", f"/plans/{plan_id}", json_body={"summary": summary}
+        )
 
     def block_task(self, plan_id: str, task_id: str, **fields: Any) -> dict[str, Any]:
         payload = {
@@ -278,7 +288,11 @@ class KeshroClient:
         plan_bundle = self.get_plan(plan_id=plan_id)
         plan = plan_bundle.get("plan") or {}
         task = next(
-            (step for step in (plan.get("plan_steps") or []) if step.get("id") == task_id),
+            (
+                step
+                for step in (plan.get("plan_steps") or [])
+                if step.get("id") == task_id
+            ),
             None,
         )
         if not task:
@@ -300,12 +314,20 @@ class KeshroClient:
         )
 
     def add_task_artifact(
-        self, plan_id: str, task_id: str, artifact_link: str, feedback_reason: str | None = None
+        self,
+        plan_id: str,
+        task_id: str,
+        artifact_link: str,
+        feedback_reason: str | None = None,
     ) -> dict[str, Any]:
         plan_bundle = self.get_plan(plan_id=plan_id)
         plan = plan_bundle.get("plan") or {}
         task = next(
-            (step for step in (plan.get("plan_steps") or []) if step.get("id") == task_id),
+            (
+                step
+                for step in (plan.get("plan_steps") or [])
+                if step.get("id") == task_id
+            ),
             None,
         )
         if not task:
@@ -316,13 +338,111 @@ class KeshroClient:
             if str(link).strip()
         ]
         next_link = artifact_link.strip()
-        next_links = existing_links if next_link in existing_links else [*existing_links, next_link]
+        next_links = (
+            existing_links
+            if next_link in existing_links
+            else [*existing_links, next_link]
+        )
         payload: dict[str, Any] = {"artifact_links": next_links}
         if feedback_reason:
             payload["feedback_reason"] = feedback_reason
         return self._request(
             "PATCH", f"/plans/{plan_id}/tasks/{task_id}", json_body=payload
         )
+
+    def generate_plan(
+        self,
+        description: str,
+        *,
+        title: str | None = None,
+        project_type: str = "generic",
+        repo: str | None = None,
+        discovered_context: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "description": description,
+            "project_type": project_type,
+        }
+        if title:
+            payload["title"] = title
+        if repo:
+            payload["repo"] = repo
+        if discovered_context:
+            payload["discovered_context"] = discovered_context
+        return self._request("POST", "/plans/generate", json_body=payload)
+
+    def plan_status(self, plan_id: str) -> dict[str, Any]:
+        plan_bundle = self.get_plan(plan_id=plan_id)
+        plan = plan_bundle.get("plan") or {}
+        steps = plan.get("plan_steps") or []
+        counts: dict[str, int] = {}
+        for step in steps:
+            status = (step.get("status") or "todo").strip().lower()
+            counts[status] = counts.get(status, 0) + 1
+        return {
+            "plan_id": plan_id,
+            "title": plan.get("title"),
+            "status": plan.get("status"),
+            "total_tasks": len(steps),
+            "task_counts": counts,
+            "enrichment_sources": plan.get("enrichment_sources") or [],
+        }
+
+    def record_decision(
+        self,
+        plan_id: str,
+        task_id: str,
+        *,
+        context: str,
+        choice: str,
+        reasoning: str,
+        alternatives: list[str] | None = None,
+    ) -> dict[str, Any]:
+        plan_bundle = self.get_plan(plan_id=plan_id)
+        plan = plan_bundle.get("plan") or {}
+        task = next(
+            (
+                step
+                for step in (plan.get("plan_steps") or [])
+                if step.get("id") == task_id
+            ),
+            None,
+        )
+        if not task:
+            raise KeshroApiError(f"Task not found: {task_id}")
+        from datetime import datetime, timezone
+
+        decision = {
+            "context": context,
+            "choice": choice,
+            "reasoning": reasoning,
+            "alternatives": alternatives or [],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        existing_decisions = task.get("decisions") or []
+        return self._request(
+            "PATCH",
+            f"/plans/{plan_id}/tasks/{task_id}",
+            json_body={"decisions": [*existing_decisions, decision]},
+        )
+
+    def push_to_tracker(
+        self,
+        plan_id: str,
+        *,
+        provider: str = "linear",
+        team_id: str | None = None,
+        project_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"provider": provider}
+        if team_id:
+            payload["team_id"] = team_id
+        if project_id:
+            payload["project_id"] = project_id
+        return self._request("POST", f"/plans/{plan_id}/push", json_body=payload)
+
+    def sync_pull(self, plan_id: str) -> dict[str, Any]:
+        return self._request("POST", f"/plans/{plan_id}/sync-pull", json_body={})
 
     def export_project(self, migration_id: str) -> dict[str, Any]:
         data = self.get_project(migration_id)

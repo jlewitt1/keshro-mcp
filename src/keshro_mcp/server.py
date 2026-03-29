@@ -310,6 +310,70 @@ def append_replan_note(plan_id: str, note: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+def generate_plan(
+    description: str,
+    title: str | None = None,
+    project_type: str = "generic",
+    repo: str | None = None,
+    discovered_context: str | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.generate_plan(
+            description,
+            title=title,
+            project_type=project_type,
+            repo=repo,
+            discovered_context=discovered_context,
+        )
+    )
+
+
+@mcp.tool()
+def plan_status(plan_id: str) -> dict[str, Any]:
+    return _run_with_client(lambda client: client.plan_status(plan_id))
+
+
+@mcp.tool()
+def record_decision(
+    plan_id: str,
+    task_id: str,
+    context: str,
+    choice: str,
+    reasoning: str,
+    alternatives: list[str] | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.record_decision(
+            plan_id,
+            task_id,
+            context=context,
+            choice=choice,
+            reasoning=reasoning,
+            alternatives=alternatives,
+        )
+    )
+
+
+@mcp.tool()
+def push_to_tracker(
+    plan_id: str,
+    provider: str = "linear",
+    team_id: str | None = None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.push_to_tracker(
+            plan_id, provider=provider, team_id=team_id, project_id=project_id
+        )
+    )
+
+
+@mcp.tool()
+def sync_pull(plan_id: str) -> dict[str, Any]:
+    return _run_with_client(lambda client: client.sync_pull(plan_id))
+
+
+@mcp.tool()
 def export_project(migration_id: str) -> str | dict[str, Any]:
     return _run_with_client(lambda client: client.export_project(migration_id))
 
