@@ -8,11 +8,11 @@ pip install keshro-mcp
 
 ## When to use this vs the CLI
 
-**Use the [CLI](https://github.com/jlewitt1/keshro-cli)** (`pip install keshro`) if you want the full experience: parallel agent execution, git checkpoints, cross-task context routing, and execution orchestration built in.
+**Use the [CLI](https://github.com/jlewitt1/keshro-cli)** (`pip install keshro`) for the full experience: interactive clarifying questions, migration detection, parallel execution in isolated worktrees, git checkpoints, cross-task context routing, and cost tracking.
 
 **Use MCP** if your agent platform speaks MCP and you want direct tool-call access to Keshro plans and tasks.
 
-The CLI does more. MCP is more flexible.
+The CLI gives you more control. MCP is more flexible for custom integrations.
 
 ## Setup
 

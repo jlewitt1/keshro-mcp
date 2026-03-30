@@ -147,6 +147,19 @@ class KeshroClient:
         steps = sorted(
             plan.get("plan_steps") or [], key=lambda step: step.get("order", 0)
         )
+        completed_ids = {
+            s.get("id")
+            for s in steps
+            if (s.get("status") or "todo").strip().lower() == "completed"
+        }
+
+        def _deps_met(step: dict) -> bool:
+            for dep in step.get("depends_on") or []:
+                if dep not in completed_ids:
+                    return False
+            return True
+
+        # Prefer in_progress first (resume), then first todo with deps met
         task = None
         for desired_status in ("in_progress", "todo"):
             task = next(
@@ -154,6 +167,7 @@ class KeshroClient:
                     step
                     for step in steps
                     if (step.get("status") or "todo").strip().lower() == desired_status
+                    and (desired_status == "in_progress" or _deps_met(step))
                 ),
                 None,
             )

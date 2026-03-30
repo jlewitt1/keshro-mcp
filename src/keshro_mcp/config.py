@@ -12,7 +12,10 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    api_url = (os.getenv("KESHRO_API_URL") or "http://localhost:8000/v1").rstrip("/")
+    api_url = (os.getenv("KESHRO_API_URL") or "https://api.keshro.com/v1").rstrip("/")
+    # Ensure /v1 suffix
+    if not api_url.endswith("/v1"):
+        api_url = f"{api_url}/v1"
     api_token = (os.getenv("KESHRO_API_TOKEN") or "").strip()
     if not api_token:
         raise RuntimeError("KESHRO_API_TOKEN is required")
