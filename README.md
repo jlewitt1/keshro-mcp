@@ -1,6 +1,6 @@
 # Keshro MCP
 
-Keshro as an MCP server. Same plans, tasks, and execution tracking — exposed as tool calls for any MCP-compatible agent.
+The intelligent execution layer for coding agents, exposed as an MCP server for high-stakes engineering projects.
 
 ```bash
 pip install keshro-mcp
