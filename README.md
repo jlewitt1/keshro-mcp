@@ -68,3 +68,12 @@ MCP works with any agent that supports the protocol — Claude Code, Cline, Cont
 ## License
 
 MIT
+# Releases
+
+Publish the MCP package with one GitHub Actions run after you bump `pyproject.toml`:
+
+```bash
+gh workflow run "Publish MCP"
+```
+
+That workflow reads the package version from `pyproject.toml`, publishes the package to PyPI, then creates the matching `vX.Y.Z` GitHub release automatically.
