@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "keshro-mcp"
-version = "0.1.29"
+version = "0.1.30"
 description = "High-stakes engineering project execution for AI agents — MCP server"
 readme = "README.md"
 license = {text = "MIT"}
