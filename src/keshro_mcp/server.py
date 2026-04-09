@@ -165,7 +165,7 @@ def add_task(
             external_issue_id=external_issue_id,
             external_issue_key=external_issue_key,
             external_issue_provider=external_issue_provider,
-            depends_on=depends_on or [],
+            depends_on=depends_on,
             parallelizable=parallelizable,
             executor=executor,
             artifact_links=artifact_links or [],
