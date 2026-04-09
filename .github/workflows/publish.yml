@@ -62,6 +62,31 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
+      - name: Push MCP version to Keshro backend
+        # Tells the backend's docs endpoint that a new MCP version has
+        # shipped. Stored in its own file (data/cli/mcp-version.json) so
+        # this is decoupled from the CLI publish workflow's upload —
+        # they can run in any order without racing on a shared blob.
+        # Non-fatal: a missing DEPLOY_SECRET, network blip, or backend
+        # outage must not block the PyPI release.
+        continue-on-error: true
+        env:
+          KESHRO_API_URL: ${{ vars.KESHRO_API_URL || 'https://api.keshro.com' }}
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DEPLOY_SECRET:-}" ]; then
+            echo "DEPLOY_SECRET not set — skipping MCP version upload."
+            exit 0
+          fi
+          curl --fail --show-error --silent \
+            -X PUT \
+            -H "X-Deploy-Secret: ${DEPLOY_SECRET}" \
+            -H "Content-Type: application/json" \
+            --data "{\"mcp_version\": \"${PACKAGE_VERSION}\"}" \
+            "${KESHRO_API_URL}/v1/mcp/version/upload"
+          echo "Uploaded MCP version ${PACKAGE_VERSION} to ${KESHRO_API_URL}"
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
