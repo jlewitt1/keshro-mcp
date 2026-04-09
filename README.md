@@ -47,6 +47,7 @@ MCP works with any agent that supports the protocol — Claude Code, Cline, Cont
 
 | Tool | What it does |
 |------|-------------|
+| `preview_plan` | Run Keshro's pre-plan intake and clarifying-question preview |
 | `generate_plan` | Generate a plan from a description using AI |
 | `list_plans` | List all plans |
 | `get_plan` | Get a plan with all tasks |
@@ -64,6 +65,18 @@ MCP works with any agent that supports the protocol — Claude Code, Cline, Cont
 | `push_to_tracker` | Push tasks to Linear, Jira, or GitHub as issues |
 | `sync_pull` | Pull status updates from connected issue tracker |
 | `export_project` | Export project data |
+
+## Current parity notes
+
+MCP now supports the newer task controls exposed in the web product:
+
+- explicit `depends_on` task dependencies
+- `parallelizable` task scheduling hints
+- per-task `executor` selection
+- generic issue linking via `issue_id`, plus external issue fields
+- pre-plan intake via `preview_plan`
+
+It still remains thinner than the CLI for actual execution orchestration. The CLI owns parallel local worktrees, git checkpoints, richer execution transcripts, and the direct `keshro continue` runtime loop.
 
 ## License
 

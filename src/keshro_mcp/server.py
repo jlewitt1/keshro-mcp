@@ -142,7 +142,13 @@ def add_task(
     owner_user_id: str | None = None,
     notes: str | None = None,
     blocked_reason: str | None = None,
-    linear_issue_id: str | None = None,
+    issue_id: str | None = None,
+    external_issue_id: str | None = None,
+    external_issue_key: str | None = None,
+    external_issue_provider: str | None = None,
+    depends_on: list[str] | None = None,
+    parallelizable: bool = False,
+    executor: str | None = None,
     artifact_links: list[str] | None = None,
 ) -> dict[str, Any]:
     return _run_with_client(
@@ -155,7 +161,13 @@ def add_task(
             owner_user_id=owner_user_id,
             notes=notes,
             blocked_reason=blocked_reason,
-            linear_issue_id=linear_issue_id,
+            linear_issue_id=issue_id,
+            external_issue_id=external_issue_id,
+            external_issue_key=external_issue_key,
+            external_issue_provider=external_issue_provider,
+            depends_on=depends_on or [],
+            parallelizable=parallelizable,
+            executor=executor,
             artifact_links=artifact_links or [],
         )
     )
@@ -172,7 +184,13 @@ def edit_task(
     owner_user_id: str | None = None,
     notes: str | None = None,
     blocked_reason: str | None = None,
-    linear_issue_id: str | None = None,
+    issue_id: str | None = None,
+    external_issue_id: str | None = None,
+    external_issue_key: str | None = None,
+    external_issue_provider: str | None = None,
+    depends_on: list[str] | None = None,
+    parallelizable: bool | None = None,
+    executor: str | None = None,
     artifact_links: list[str] | None = None,
 ) -> dict[str, Any]:
     return _run_with_client(
@@ -186,7 +204,13 @@ def edit_task(
             owner_user_id=owner_user_id,
             notes=notes,
             blocked_reason=blocked_reason,
-            linear_issue_id=linear_issue_id,
+            linear_issue_id=issue_id,
+            external_issue_id=external_issue_id,
+            external_issue_key=external_issue_key,
+            external_issue_provider=external_issue_provider,
+            depends_on=depends_on,
+            parallelizable=parallelizable,
+            executor=executor,
             artifact_links=artifact_links,
         )
     )
@@ -319,6 +343,25 @@ def generate_plan(
 ) -> dict[str, Any]:
     return _run_with_client(
         lambda client: client.generate_plan(
+            description,
+            title=title,
+            project_type=project_type,
+            repo=repo,
+            discovered_context=discovered_context,
+        )
+    )
+
+
+@mcp.tool()
+def preview_plan(
+    description: str,
+    title: str | None = None,
+    project_type: str = "generic",
+    repo: str | None = None,
+    discovered_context: str | None = None,
+) -> dict[str, Any]:
+    return _run_with_client(
+        lambda client: client.preview_plan(
             description,
             title=title,
             project_type=project_type,
