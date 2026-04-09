@@ -79,11 +79,18 @@ jobs:
             echo "DEPLOY_SECRET not set — skipping MCP version upload."
             exit 0
           fi
+          python - > mcp-version.json <<'PY'
+          import json
+          import os
+
+          print(json.dumps({"mcp_version": os.environ["PACKAGE_VERSION"]}))
+          PY
           curl --fail --show-error --silent \
+            --max-time 30 \
             -X PUT \
             -H "X-Deploy-Secret: ${DEPLOY_SECRET}" \
             -H "Content-Type: application/json" \
-            --data "{\"mcp_version\": \"${PACKAGE_VERSION}\"}" \
+            --data @mcp-version.json \
             "${KESHRO_API_URL}/v1/mcp/version/upload"
           echo "Uploaded MCP version ${PACKAGE_VERSION} to ${KESHRO_API_URL}"
 
