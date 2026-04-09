@@ -385,6 +385,27 @@ class KeshroClient:
             payload["discovered_context"] = discovered_context
         return self._request("POST", "/plans/generate", json_body=payload)
 
+    def preview_plan(
+        self,
+        description: str,
+        *,
+        title: str | None = None,
+        project_type: str = "generic",
+        repo: str | None = None,
+        discovered_context: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "description": description,
+            "project_type": project_type,
+        }
+        if title:
+            payload["title"] = title
+        if repo:
+            payload["repo"] = repo
+        if discovered_context:
+            payload["discovered_context"] = discovered_context
+        return self._request("POST", "/plans/describe/preview", json_body=payload)
+
     def plan_status(self, plan_id: str) -> dict[str, Any]:
         plan_bundle = self.get_plan(plan_id=plan_id)
         plan = plan_bundle.get("plan") or {}
@@ -500,7 +521,13 @@ class KeshroClient:
                 "canonical_task_id_field": "id",
                 "canonical_task_status_field": "status",
                 "owner_fields": ["owner_user_id", "owner"],
-                "external_issue_fields": ["linear_issue_id", "artifact_links"],
+                "external_issue_fields": [
+                    "linear_issue_id",
+                    "external_issue_id",
+                    "external_issue_key",
+                    "external_issue_provider",
+                    "artifact_links",
+                ],
                 "supported_targets": ["linear", "jira"],
             },
         }
