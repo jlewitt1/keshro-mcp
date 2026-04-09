@@ -521,7 +521,13 @@ class KeshroClient:
                 "canonical_task_id_field": "id",
                 "canonical_task_status_field": "status",
                 "owner_fields": ["owner_user_id", "owner"],
-                "external_issue_fields": ["linear_issue_id", "artifact_links"],
+                "external_issue_fields": [
+                    "linear_issue_id",
+                    "external_issue_id",
+                    "external_issue_key",
+                    "external_issue_provider",
+                    "artifact_links",
+                ],
                 "supported_targets": ["linear", "jira"],
             },
         }

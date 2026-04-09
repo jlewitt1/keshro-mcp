@@ -147,7 +147,7 @@ def add_task(
     external_issue_key: str | None = None,
     external_issue_provider: str | None = None,
     depends_on: list[str] | None = None,
-    parallelizable: bool = False,
+    parallelizable: bool | None = None,
     executor: str | None = None,
     artifact_links: list[str] | None = None,
 ) -> dict[str, Any]:
